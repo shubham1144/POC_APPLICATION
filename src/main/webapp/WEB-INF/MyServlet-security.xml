@@ -1,0 +1,81 @@
+<!-- create a beans instance and mention this file in the web.xml file so 
+	that the framework can detect the file -->
+<beans:beans xmlns="http://www.springframework.org/schema/security"
+	xmlns:beans="http://www.springframework.org/schema/beans" xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+    http://www.springframework.org/schema/security
+    http://www.springframework.org/schema/security/spring-security-3.2.xsd
+    http://www.springframework.org/schema/context 
+    http://www.springframework.org/schema/context/spring-context.xsd
+    http://www.springframework.org/schema/mvc 
+    http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+	<!-- need for the controller to be injected into the context -->
+	<mvc:annotation-driven />
+	<!-- we need to specify the base package beacuse the framework will search 
+		for annotations in the base package files -->
+	<!-- specify the paths of the folders that contain our views -->
+
+
+
+	<context:component-scan base-package="com.learnandpush" />
+	<!-- use a bean for database connection -->
+	<beans:import resource="/my-Datasource.xml" />
+	<!-- i want to declare a bean here and access it from the java file -->
+	<beans:bean id="customerDAO" class="com.learnandpush.impl.jdbcCustomerDAO">
+		<beans:property name="dataSource" ref="dataSource">
+		</beans:property>
+	</beans:bean>
+	<!-- custom authorites provider because unable to fetch roles from the memberof 
+		property in ad server -->
+	<beans:bean id="grantedAuthoritiesMapper"
+		class="com.learnandpush.authorities.ActiveDirectoryGrantedAuthoritiesMapper "></beans:bean>
+
+	<!-- configure ldap to use smartek active directory from here -->
+	<beans:bean id="ldapActiveDirectoryAuthProvider"
+		class="org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider">
+		<beans:constructor-arg>
+			<beans:value>pune.smartek21.st21</beans:value>
+		</beans:constructor-arg>
+		<beans:constructor-arg>
+			<beans:value>ldap://pune.smartek21.st21/</beans:value>
+		</beans:constructor-arg>
+		<!-- adding this bean to provide authorities mapping for the user -->
+		<beans:property name="authoritiesMapper" ref="grantedAuthoritiesMapper"></beans:property>
+	</beans:bean>
+
+
+	<!-- use internal resource view resolver -->
+	<beans:bean id="viewResolver"
+		class="org.springframework.web.servlet.view.UrlBasedViewResolver">
+		<beans:property name="viewClass"
+			value="org.springframework.web.servlet.view.JstlView" />
+		<beans:property name="prefix" value="/WEB-INF/views/" />
+		<beans:property name="suffix" value=".jsp" />
+	</beans:bean>
+	<!-- define http,authentication-manager,intercept url in this file,also 
+		define the context:property-placeholder in this file -->
+
+
+	<http auto-config='true'>
+		<intercept-url pattern="/*" access="ROLE_USER" />
+		<form-login default-target-url="/loggedin"
+			always-use-default-target="true" />
+		<logout />
+	</http>
+	<!-- use a authentication-manager to use spring security -->
+	<authentication-manager>
+		<!-- <authentication-provider> <user-service> <user name="shubham" password="shubham" 
+			authorities="ROLE_USER" /> <user name="shubh" password="shubh" authorities="ROLE_ADMIN" 
+			/> </user-service> </authentication-provider> -->
+		<!-- included a reference to ldap authentication provider -->
+
+		<authentication-provider ref="ldapActiveDirectoryAuthProvider" />
+
+	</authentication-manager>
+	<!-- adding this bean inorder to use the authorize tag in jsp page -->
+	<beans:bean id="webexpressionHandler"
+		class="org.springframework.security.web.access.expression.DefaultWebSecurityExpressionHandler" />
+</beans:beans>
